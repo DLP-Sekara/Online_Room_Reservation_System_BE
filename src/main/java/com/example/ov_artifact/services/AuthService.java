@@ -50,4 +50,13 @@ public class AuthService {
         responseDTO.setToken(token);
         return responseDTO;
     }
+
+    public AuthDTO checkSession(String email) {
+        SystemUsers user = authRepo.findByEmail(email)
+                .orElseThrow(() -> new AccessDeniedException("Session invalid or User not found"));
+
+        AuthDTO authDTO = modelMapper.map(user, AuthDTO.class);
+        authDTO.setPassword(null);
+        return authDTO;
+    }
 }
