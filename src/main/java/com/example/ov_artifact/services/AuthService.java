@@ -2,6 +2,7 @@ package com.example.ov_artifact.services;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -36,10 +37,10 @@ public class AuthService {
 
     public AuthDTO loginUser(AuthDTO authDTO) {
         SystemUsers user = authRepo.findByEmail(authDTO.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found!"));
+                .orElseThrow(() -> new AccessDeniedException("User not found!"));
 
         if (!passwordEncoder.matches(authDTO.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid Password!");
+            throw new AccessDeniedException("Invalid Password!");
         }
 
         String token = jwtUtil.generateToken(user.getEmail());
