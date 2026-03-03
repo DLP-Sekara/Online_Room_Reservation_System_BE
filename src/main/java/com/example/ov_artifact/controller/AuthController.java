@@ -27,4 +27,13 @@ public class AuthController {
                 new StandardResponse(true, 201, "User Saved Successfully", null),
                 HttpStatus.CREATED);
     }
+
+    @PostMapping("/login")
+    public ResponseEntity<StandardResponse> login(@RequestBody AuthDTO authDTO) {
+        AuthDTO loggedUser = authService.loginUser(authDTO);
+
+        return new ResponseEntity<>(
+                new StandardResponse(true, 200, "Login Successful!", loggedUser),
+                HttpStatus.OK);
+    }
 }
