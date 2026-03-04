@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+import com.example.ov_artifact.util.MealStatus;
+
 @Entity
 @Table(name = "meal_plans")
 @Data
@@ -23,4 +25,12 @@ public class MealPlan {
 
     @Column(name = "price", precision = 10, scale = 2, nullable = false)
     private BigDecimal price;
+
+    @Column(name = "plan_code", length = 10, unique = true, nullable = false)
+    private String planCode;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20, nullable = false)
+    private MealStatus status;
+
 }

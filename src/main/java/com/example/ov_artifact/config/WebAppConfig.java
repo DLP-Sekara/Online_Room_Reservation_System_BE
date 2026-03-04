@@ -6,6 +6,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import com.example.ov_artifact.dto.MealPlanDTO;
+import com.example.ov_artifact.entity.MealPlan;
+import com.example.ov_artifact.util.MealStatus;
+
 @Configuration
 public class WebAppConfig implements WebMvcConfigurer {
 
@@ -19,7 +23,21 @@ public class WebAppConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    public ModelMapper modelMapper() {
-        return new ModelMapper();
-    }
+public ModelMapper modelMapper() {
+    ModelMapper modelMapper = new ModelMapper();
+    
+    // String to Enum (DTO -> Entity)
+    modelMapper.createTypeMap(MealPlanDTO.class, MealPlan.class).addMappings(mapper -> {
+        mapper.using(ctx -> ctx.getSource() == null ? null : MealStatus.valueOf(ctx.getSource().toString().toUpperCase()))
+              .map(MealPlanDTO::getStatus, MealPlan::setStatus);
+    });
+
+    // Enum to String (Entity -> DTO)
+    modelMapper.createTypeMap(MealPlan.class, MealPlanDTO.class).addMappings(mapper -> {
+        mapper.using(ctx -> ctx.getSource() == null ? null : ctx.getSource().toString())
+              .map(MealPlan::getStatus, MealPlanDTO::setStatus);
+    });
+
+    return modelMapper;
+}
 }

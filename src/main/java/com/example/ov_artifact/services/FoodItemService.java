@@ -22,6 +22,9 @@ public class FoodItemService {
     private ModelMapper modelMapper;
 
     public void addFoodItem(FoodItemDTO foodItemDTO) {
+        if (foodItemRepository.existsByName(foodItemDTO.getName())) {
+            throw new IllegalArgumentException("Food Item name " + foodItemDTO.getName() + "' already exists!");
+        }
         FoodItem foodItem = modelMapper.map(foodItemDTO, FoodItem.class);
         foodItemRepository.save(foodItem);
     }

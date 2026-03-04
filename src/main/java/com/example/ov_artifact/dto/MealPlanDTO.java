@@ -13,4 +13,6 @@ public class MealPlanDTO {
     private String planId;
     private String name;
     private BigDecimal price;
+    private String planCode;
+    private String status;
 }

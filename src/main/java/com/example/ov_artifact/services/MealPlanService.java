@@ -5,11 +5,11 @@ import com.example.ov_artifact.entity.MealPlan;
 import com.example.ov_artifact.repository.MealPlanRepository;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
-import org.modelmapper.TypeToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -22,6 +22,9 @@ public class MealPlanService {
     private ModelMapper modelMapper;
 
     public void addMealPlan(MealPlanDTO mealPlanDTO) {
+        if (mealPlanRepository.existsByName(mealPlanDTO.getName())) {
+            throw new IllegalArgumentException("Meal Plan name '" + mealPlanDTO.getName() + "' already exists!");
+        }
         MealPlan mealPlan = modelMapper.map(mealPlanDTO, MealPlan.class);
         mealPlanRepository.save(mealPlan);
     }
@@ -45,7 +48,8 @@ public class MealPlanService {
 
     public List<MealPlanDTO> getAllMealPlans() {
         List<MealPlan> mealPlans = mealPlanRepository.findAll();
-        return modelMapper.map(mealPlans, new TypeToken<List<MealPlanDTO>>() {
-        }.getType());
+        return mealPlans.stream()
+                .map(mealPlan -> modelMapper.map(mealPlan, MealPlanDTO.class))
+                .collect(Collectors.toList());
     }
 }
