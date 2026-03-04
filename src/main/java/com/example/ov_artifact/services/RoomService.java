@@ -27,6 +27,9 @@ public class RoomService {
     private ModelMapper modelMapper;
 
     public void addRoom(RoomDTO roomDTO) {
+        if (roomRepository.existsByRoomNumber(roomDTO.getRoomNumber())) {
+        throw new IllegalArgumentException("Room number '" + roomDTO.getRoomNumber() + "' already exists!");
+    }
         RoomType roomType = roomTypeRepository.findById(roomDTO.getTypeId())
                 .orElseThrow(() -> new RuntimeException("Room Type not found for ID: " + roomDTO.getTypeId()));
         

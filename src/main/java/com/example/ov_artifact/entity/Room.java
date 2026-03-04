@@ -25,6 +25,6 @@ public class Room {
     private RoomType roomType;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", nullable = false, length = 20)
     private RoomStatus status;
 }
