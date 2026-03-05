@@ -17,27 +17,28 @@ public class WebAppConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOrigins("http://localhost:5175")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
                 .allowCredentials(true);
     }
 
     @Bean
-public ModelMapper modelMapper() {
-    ModelMapper modelMapper = new ModelMapper();
-    
-    // String to Enum (DTO -> Entity)
-    modelMapper.createTypeMap(MealPlanDTO.class, MealPlan.class).addMappings(mapper -> {
-        mapper.using(ctx -> ctx.getSource() == null ? null : MealStatus.valueOf(ctx.getSource().toString().toUpperCase()))
-              .map(MealPlanDTO::getStatus, MealPlan::setStatus);
-    });
+    public ModelMapper modelMapper() {
+        ModelMapper modelMapper = new ModelMapper();
 
-    // Enum to String (Entity -> DTO)
-    modelMapper.createTypeMap(MealPlan.class, MealPlanDTO.class).addMappings(mapper -> {
-        mapper.using(ctx -> ctx.getSource() == null ? null : ctx.getSource().toString())
-              .map(MealPlan::getStatus, MealPlanDTO::setStatus);
-    });
+        // String to Enum (DTO -> Entity)
+        modelMapper.createTypeMap(MealPlanDTO.class, MealPlan.class).addMappings(mapper -> {
+            mapper.using(ctx -> ctx.getSource() == null ? null
+                    : MealStatus.valueOf(ctx.getSource().toString().toUpperCase()))
+                    .map(MealPlanDTO::getStatus, MealPlan::setStatus);
+        });
 
-    return modelMapper;
-}
+        // Enum to String (Entity -> DTO)
+        modelMapper.createTypeMap(MealPlan.class, MealPlanDTO.class).addMappings(mapper -> {
+            mapper.using(ctx -> ctx.getSource() == null ? null : ctx.getSource().toString())
+                    .map(MealPlan::getStatus, MealPlanDTO::setStatus);
+        });
+
+        return modelMapper;
+    }
 }

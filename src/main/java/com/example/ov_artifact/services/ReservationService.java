@@ -89,10 +89,11 @@ public class ReservationService {
         MealPlan mealPlan = mealPlanRepository.findById(reservationDTO.getPlanId())
                 .orElseThrow(() -> new RuntimeException("Meal Plan not found"));
 
-        // Guest count check
-        if (reservationDTO.getGuestCount() > room.getRoomType().getMaxOccupancy()) {
-            throw new RuntimeException("Guest count should be less than " +
-                    room.getRoomType().getMaxOccupancy());
+        // 2. Guest count check
+        int maxAllowed = room.getRoomType().getMaxOccupancy();
+        if (reservationDTO.getGuestCount() > maxAllowed) {
+            throw new RuntimeException("The room has a maximum occupancy of " + maxAllowed + " only. " +
+                    "You have requested " + reservationDTO.getGuestCount());
         }
 
         // 3. Reservation Create
@@ -199,12 +200,16 @@ public class ReservationService {
         return modelMapper.map(reservation, ReservationDTO.class);
     }
 
+    @Transactional
     public void deleteReservation(String id) {
-        if (reservationRepository.existsById(id)) {
-            reservationRepository.deleteById(id);
-        } else {
-            throw new RuntimeException("Reservation not found");
-        }
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Reservation not found"));
+
+        Room room = reservation.getRoom();
+        room.setStatus(RoomStatus.MAINTENANCE);
+        roomRepository.save(room);
+
+        reservationRepository.delete(reservation);
     }
 
     public boolean isRoomAvailable(String roomId, LocalDate checkIn, LocalDate checkOut) {

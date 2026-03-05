@@ -66,7 +66,7 @@ public class ReservationController {
                 HttpStatus.OK);
     }
 
-    @PatchMapping("/checkout/{resId}")
+    @PutMapping("/checkout/{resId}")
     public ResponseEntity<StandardResponse> checkOutGuest(@PathVariable String resId) {
         reservationService.checkOutGuest(resId);
         return new ResponseEntity<>(
