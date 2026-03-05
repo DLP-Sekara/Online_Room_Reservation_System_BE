@@ -23,4 +23,7 @@ public class RoomType {
 
     @Column(name = "price_per_night", precision = 10, scale = 2, nullable = false)
     private BigDecimal pricePerNight;
+
+    @Column(name = "max_occupancy", nullable = false)
+    private Integer maxOccupancy;
 }

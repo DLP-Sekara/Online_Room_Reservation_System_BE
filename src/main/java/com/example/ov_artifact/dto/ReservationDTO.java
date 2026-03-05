@@ -21,5 +21,7 @@ public class ReservationDTO {
     private LocalDate checkOut;
     private BigDecimal totalBill;
     private ReservationStatus status;
+    private Integer guestCount;
     private List<ReservationDetailDTO> reservationDetails;
+
 }

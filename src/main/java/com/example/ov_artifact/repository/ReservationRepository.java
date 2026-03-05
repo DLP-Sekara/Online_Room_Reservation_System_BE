@@ -18,4 +18,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, String
        List<Reservation> findOverlappingReservations(@Param("roomId") String roomId,
                      @Param("checkIn") LocalDate checkIn,
                      @Param("checkOut") LocalDate checkOut);
+
+       @Query("SELECT COUNT(r) > 0 FROM Reservation r " +
+                     "WHERE r.room.roomId = :roomId " +
+                     "AND r.status != 'CANCELLED' " +
+                     "AND (r.checkIn < :checkOut AND r.checkOut > :checkIn)")
+       boolean existsOverlappingReservation(
+                     @Param("roomId") String roomId,
+                     @Param("checkIn") LocalDate checkIn,
+                     @Param("checkOut") LocalDate checkOut);
 }

@@ -1,6 +1,7 @@
 package com.example.ov_artifact.controller;
 
 import com.example.ov_artifact.dto.ReservationDTO;
+import com.example.ov_artifact.dto.RoomDTO;
 import com.example.ov_artifact.services.ReservationService;
 import com.example.ov_artifact.util.StandardResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,14 +29,16 @@ public class ReservationController {
                 HttpStatus.CREATED);
     }
 
-    @GetMapping("/check-availability")
-    public ResponseEntity<StandardResponse> checkAvailability(
-            @RequestParam String roomId,
+    @GetMapping("/available-rooms")
+    public ResponseEntity<StandardResponse> getAvailableRooms(
+            @RequestParam String typeId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut) {
-        boolean available = reservationService.isRoomAvailable(roomId, checkIn, checkOut);
+
+        List<RoomDTO> availableRooms = reservationService.getAvailableRoomsForBooking(typeId, checkIn, checkOut);
+
         return new ResponseEntity<>(
-                new StandardResponse(true, 200, "Availability Checked", available),
+                new StandardResponse(true, 200, "Available Rooms Fetched", availableRooms),
                 HttpStatus.OK);
     }
 
@@ -55,19 +58,19 @@ public class ReservationController {
                 HttpStatus.OK);
     }
 
-    @PutMapping("/update")
-    public ResponseEntity<StandardResponse> updateReservation(@RequestBody ReservationDTO reservationDTO) {
-        reservationService.updateReservation(reservationDTO);
-        return new ResponseEntity<>(
-                new StandardResponse(true, 200, "Reservation Updated Successfully", null),
-                HttpStatus.OK);
-    }
-
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<StandardResponse> deleteReservation(@PathVariable String id) {
         reservationService.deleteReservation(id);
         return new ResponseEntity<>(
                 new StandardResponse(true, 200, "Reservation Deleted Successfully", null),
+                HttpStatus.OK);
+    }
+
+    @PatchMapping("/checkout/{resId}")
+    public ResponseEntity<StandardResponse> checkOutGuest(@PathVariable String resId) {
+        reservationService.checkOutGuest(resId);
+        return new ResponseEntity<>(
+                new StandardResponse(true, 200, "Guest Checked Out Successfully. Room moved to Maintenance.", null),
                 HttpStatus.OK);
     }
 }

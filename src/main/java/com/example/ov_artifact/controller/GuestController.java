@@ -49,4 +49,12 @@ public class GuestController {
                 new StandardResponse(true, 200, "Guests Fetched Successfully", guests),
                 HttpStatus.OK);
     }
+
+    @GetMapping("/find-by-nic/{nic}")
+    public ResponseEntity<StandardResponse> findGuestByNic(@PathVariable String nic) {
+        GuestDTO guest = guestService.findGuestByNic(nic);
+        return new ResponseEntity<>(
+                new StandardResponse(true, 200, "Guest Fetched Successfully", guest),
+                HttpStatus.OK);
+    }
 }

@@ -2,9 +2,12 @@ package com.example.ov_artifact.services;
 
 import com.example.ov_artifact.dto.ReservationDTO;
 import com.example.ov_artifact.dto.ReservationDetailDTO;
+import com.example.ov_artifact.dto.RoomDTO;
 import com.example.ov_artifact.entity.*;
 import com.example.ov_artifact.repository.*;
 import com.example.ov_artifact.util.ReservationStatus;
+import com.example.ov_artifact.util.RoomStatus;
+
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
@@ -14,8 +17,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -23,9 +26,6 @@ public class ReservationService {
 
     @Autowired
     private ReservationRepository reservationRepository;
-
-    @Autowired
-    private ReservationDetailRepository reservationDetailRepository;
 
     @Autowired
     private GuestRepository guestRepository;
@@ -42,9 +42,11 @@ public class ReservationService {
     @Autowired
     private ModelMapper modelMapper;
 
-    public boolean isRoomAvailable(String roomId, LocalDate checkIn, LocalDate checkOut) {
-        List<Reservation> overlapping = reservationRepository.findOverlappingReservations(roomId, checkIn, checkOut);
-        return overlapping.isEmpty();
+    public List<RoomDTO> getAvailableRoomsForBooking(String typeId, LocalDate checkIn, LocalDate checkOut) {
+        List<Room> availableRooms = roomRepository.findAvailableRooms(typeId, checkIn, checkOut);
+
+        return modelMapper.map(availableRooms, new TypeToken<List<RoomDTO>>() {
+        }.getType());
     }
 
     public BigDecimal calculateBill(ReservationDTO reservationDTO) {
@@ -54,11 +56,12 @@ public class ReservationService {
                 .orElseThrow(() -> new RuntimeException("Meal Plan not found"));
 
         long nights = ChronoUnit.DAYS.between(reservationDTO.getCheckIn(), reservationDTO.getCheckOut());
-        if (nights <= 0) nights = 1; // Minimum 1 night charge
+        if (nights <= 0)
+            nights = 1; // Minimum 1 night charge
 
         BigDecimal roomTotal = room.getRoomType().getPricePerNight().multiply(BigDecimal.valueOf(nights));
         BigDecimal mealTotal = mealPlan.getPrice().multiply(BigDecimal.valueOf(nights));
-        
+
         BigDecimal foodTotal = BigDecimal.ZERO;
         if (reservationDTO.getReservationDetails() != null) {
             for (ReservationDetailDTO detailDTO : reservationDTO.getReservationDetails()) {
@@ -71,11 +74,14 @@ public class ReservationService {
         return roomTotal.add(mealTotal).add(foodTotal);
     }
 
+    @Transactional
     public String createReservation(ReservationDTO reservationDTO) {
+        // 1. Availability Check
         if (!isRoomAvailable(reservationDTO.getRoomId(), reservationDTO.getCheckIn(), reservationDTO.getCheckOut())) {
-            throw new RuntimeException("Room is not available for the selected dates");
+            throw new RuntimeException("Room is not available");
         }
 
+        // 2. Guest, Room, Meal Plan Load
         Guest guest = guestRepository.findById(reservationDTO.getGuestId())
                 .orElseThrow(() -> new RuntimeException("Guest not found"));
         Room room = roomRepository.findById(reservationDTO.getRoomId())
@@ -83,51 +89,108 @@ public class ReservationService {
         MealPlan mealPlan = mealPlanRepository.findById(reservationDTO.getPlanId())
                 .orElseThrow(() -> new RuntimeException("Meal Plan not found"));
 
+        // Guest count check
+        if (reservationDTO.getGuestCount() > room.getRoomType().getMaxOccupancy()) {
+            throw new RuntimeException("Guest count should be less than " +
+                    room.getRoomType().getMaxOccupancy());
+        }
+
+        // 3. Reservation Create
         Reservation reservation = new Reservation();
         reservation.setGuest(guest);
         reservation.setRoom(room);
         reservation.setMealPlan(mealPlan);
         reservation.setCheckIn(reservationDTO.getCheckIn());
         reservation.setCheckOut(reservationDTO.getCheckOut());
-        reservation.setStatus(ReservationStatus.PENDING);
-        
-        // Initial bill calculation
-        reservation.setTotalBill(calculateBill(reservationDTO));
+        reservation.setStatus(ReservationStatus.CONFIRMED);
+        reservation.setGuestCount(reservationDTO.getGuestCount());
 
-        Reservation savedReservation = reservationRepository.save(reservation);
+        // 4. Food Items Load and Calculate Total
+        BigDecimal foodTotal = BigDecimal.ZERO;
+        List<ReservationDetail> details = new ArrayList<>();
 
-        if (reservationDTO.getReservationDetails() != null) {
-            List<ReservationDetail> details = reservationDTO.getReservationDetails().stream().map(d -> {
+        if (reservationDTO.getReservationDetails() != null && !reservationDTO.getReservationDetails().isEmpty()) {
+            for (ReservationDetailDTO d : reservationDTO.getReservationDetails()) {
                 FoodItem item = foodItemRepository.findById(d.getItemId())
-                        .orElseThrow(() -> new RuntimeException("Food Item not found"));
+                        .orElseThrow(() -> new RuntimeException("Food Item not found: " + d.getItemId()));
+
                 ReservationDetail detail = new ReservationDetail();
-                detail.setReservation(savedReservation);
+                detail.setReservation(reservation);
                 detail.setFoodItem(item);
                 detail.setOrderedQty(d.getOrderedQty());
-                return detail;
-            }).collect(Collectors.toList());
-            reservationDetailRepository.saveAll(details);
+                details.add(detail);
+
+                // Food item total calculate
+                BigDecimal itemTotal = item.getUnitPrice().multiply(new BigDecimal(d.getOrderedQty()));
+                foodTotal = foodTotal.add(itemTotal);
+            }
         }
+        reservation.setReservationDetails(details);
+
+        // 5. Calculate Total (Room + Meal + Food)
+        BigDecimal finalBill = calculateTotalAmount(reservation, foodTotal);
+        reservation.setTotalBill(finalBill);
+
+        // 6. Save Reservation
+        Reservation savedReservation = reservationRepository.save(reservation);
+
+        // 7. Room Status Update to OCCUPIED
+        room.setStatus(RoomStatus.OCCUPIED);
+        roomRepository.save(room);
 
         return savedReservation.getResId();
     }
 
-    public void updateReservation(ReservationDTO reservationDTO) {
-        Reservation reservation = reservationRepository.findById(reservationDTO.getResId())
-                .orElseThrow(() -> new RuntimeException("Reservation not found"));
-        
-        // Update basic fields if provided
-        if (reservationDTO.getStatus() != null) reservation.setStatus(reservationDTO.getStatus());
-        
-        // Recalculate bill if needed
-        reservation.setTotalBill(calculateBill(reservationDTO));
-        
+    @Transactional
+    public void checkOutGuest(String resId) {
+        // 1. FInd Reservation
+        Reservation reservation = reservationRepository.findById(resId)
+                .orElseThrow(() -> new RuntimeException("Reservation not found with ID: " + resId));
+
+        // 2. check weather reservation status is CONFIRMED
+        if (!reservation.getStatus().equals(ReservationStatus.CONFIRMED)) {
+            throw new RuntimeException("Only confirmed reservations can be checked out.");
+        }
+
+        // 3. Reservation Status Update to COMPLETED
+        reservation.setStatus(ReservationStatus.COMPLETED);
+
+        // 4. Room Status Update to MAINTENANCE
+        Room room = reservation.getRoom();
+        room.setStatus(RoomStatus.MAINTENANCE);
+
         reservationRepository.save(reservation);
+        roomRepository.save(room);
+    }
+
+    private BigDecimal calculateTotalAmount(Reservation res, BigDecimal foodTotal) {
+        // 1. Nights Calculate
+        long days = ChronoUnit.DAYS.between(res.getCheckIn(), res.getCheckOut());
+
+        // Check if days is less than 1
+        if (days <= 0) {
+            days = 1;
+        }
+
+        BigDecimal totalNights = new BigDecimal(days);
+        BigDecimal guestCount = new BigDecimal(res.getGuestCount());
+
+        // 2. Room Charge = (Room Type Price * Nights)
+        BigDecimal roomCharge = res.getRoom().getRoomType().getPricePerNight().multiply(totalNights);
+
+        // 3. Meal Charge = (Meal Plan Price * Guest Count * Nights)
+        BigDecimal mealCharge = res.getMealPlan().getPrice()
+                .multiply(guestCount)
+                .multiply(totalNights);
+
+        // 4. Final Bill = Room Charge + Meal Charge + Additional Food Total
+        return roomCharge.add(mealCharge).add(foodTotal);
     }
 
     public List<ReservationDTO> getAllReservations() {
         List<Reservation> reservations = reservationRepository.findAll();
-        return modelMapper.map(reservations, new TypeToken<List<ReservationDTO>>() {}.getType());
+        return modelMapper.map(reservations, new TypeToken<List<ReservationDTO>>() {
+        }.getType());
     }
 
     public ReservationDTO getReservationById(String id) {
@@ -142,5 +205,16 @@ public class ReservationService {
         } else {
             throw new RuntimeException("Reservation not found");
         }
+    }
+
+    public boolean isRoomAvailable(String roomId, LocalDate checkIn, LocalDate checkOut) {
+
+        if (checkIn.isAfter(checkOut) || checkIn.isEqual(checkOut)) {
+            throw new IllegalArgumentException("Check-out date must be after check-in date.");
+        }
+
+        boolean isReserved = reservationRepository.existsOverlappingReservation(roomId, checkIn, checkOut);
+
+        return !isReserved;
     }
 }

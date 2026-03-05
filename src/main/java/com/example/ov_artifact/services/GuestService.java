@@ -3,6 +3,8 @@ package com.example.ov_artifact.services;
 import com.example.ov_artifact.dto.GuestDTO;
 import com.example.ov_artifact.entity.Guest;
 import com.example.ov_artifact.repository.GuestRepository;
+
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
@@ -51,5 +53,12 @@ public class GuestService {
         List<Guest> guests = guestRepository.findAll();
         return modelMapper.map(guests, new TypeToken<List<GuestDTO>>() {
         }.getType());
+    }
+
+    public GuestDTO findGuestByNic(String nic) {
+        Guest guest = guestRepository.findByNic(nic)
+                .orElseThrow(() -> new EntityNotFoundException("Guest not found with NIC: " + nic));
+
+        return modelMapper.map(guest, GuestDTO.class);
     }
 }

@@ -13,4 +13,5 @@ public class RoomTypeDTO {
     private String typeId;
     private String typeName;
     private BigDecimal pricePerNight;
+    private Integer maxOccupancy;
 }

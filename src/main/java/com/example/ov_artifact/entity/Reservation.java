@@ -43,9 +43,12 @@ public class Reservation {
     private BigDecimal totalBill;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", nullable = false, length = 20)
     private ReservationStatus status;
 
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReservationDetail> reservationDetails;
+
+    @Column(name = "guest_count", nullable = false)
+    private Integer guestCount;
 }
