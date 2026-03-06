@@ -20,9 +20,10 @@ public class GuestController {
 
     @PostMapping("/add")
     public ResponseEntity<StandardResponse> addGuest(@RequestBody GuestDTO guestDTO) {
-        guestService.addGuest(guestDTO);
+        GuestDTO savedGuest = guestService.addGuest(guestDTO);
         return new ResponseEntity<>(
-                new StandardResponse(true, 201, "Guest Added Successfully", null),
+                new StandardResponse(true, 201, "Guest Added Successfully",
+                        savedGuest),
                 HttpStatus.CREATED);
     }
 

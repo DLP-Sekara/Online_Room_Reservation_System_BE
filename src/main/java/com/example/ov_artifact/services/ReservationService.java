@@ -9,16 +9,19 @@ import com.example.ov_artifact.util.ReservationStatus;
 import com.example.ov_artifact.util.RoomStatus;
 
 import jakarta.transaction.Transactional;
+
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.math.BigDecimal; 
 
 @Service
 @Transactional
@@ -43,8 +46,8 @@ public class ReservationService {
     private ModelMapper modelMapper;
 
     public List<RoomDTO> getAvailableRoomsForBooking(String typeId, LocalDate checkIn, LocalDate checkOut) {
-        List<Room> availableRooms = roomRepository.findAvailableRooms(typeId, checkIn, checkOut);
 
+        List<Room> availableRooms = roomRepository.findAvailableRooms(typeId, checkIn, checkOut);
         return modelMapper.map(availableRooms, new TypeToken<List<RoomDTO>>() {
         }.getType());
     }
@@ -103,7 +106,7 @@ public class ReservationService {
         reservation.setMealPlan(mealPlan);
         reservation.setCheckIn(reservationDTO.getCheckIn());
         reservation.setCheckOut(reservationDTO.getCheckOut());
-        reservation.setStatus(ReservationStatus.CONFIRMED);
+        reservation.setStatus(ReservationStatus.PENDING);
         reservation.setGuestCount(reservationDTO.getGuestCount());
 
         // 4. Food Items Load and Calculate Total
@@ -148,9 +151,9 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(resId)
                 .orElseThrow(() -> new RuntimeException("Reservation not found with ID: " + resId));
 
-        // 2. check weather reservation status is CONFIRMED
-        if (!reservation.getStatus().equals(ReservationStatus.CONFIRMED)) {
-            throw new RuntimeException("Only confirmed reservations can be checked out.");
+        // 2. check weather reservation status is PENDING
+        if (!reservation.getStatus().equals(ReservationStatus.PENDING)) {
+            throw new RuntimeException("Only Pending reservations can be checked out.");
         }
 
         // 3. Reservation Status Update to COMPLETED
@@ -158,7 +161,7 @@ public class ReservationService {
 
         // 4. Room Status Update to MAINTENANCE
         Room room = reservation.getRoom();
-        room.setStatus(RoomStatus.MAINTENANCE);
+        room.setStatus(RoomStatus.CLEANING);
 
         reservationRepository.save(reservation);
         roomRepository.save(room);
@@ -221,5 +224,19 @@ public class ReservationService {
         boolean isReserved = reservationRepository.existsOverlappingReservation(roomId, checkIn, checkOut);
 
         return !isReserved;
+    }
+
+    public Map<String, BigDecimal> getIncomeStats(int year, int month) {
+
+        Map<String, BigDecimal> stats = new HashMap<>();
+
+        BigDecimal totalAllTime = reservationRepository.calculateTotalAllTimeIncome();
+        BigDecimal monthlyIncome = reservationRepository.calculateMonthlyIncome(year, month);
+
+        // Null safety check
+        stats.put("totalAllTimeIncome", (totalAllTime != null) ? totalAllTime : BigDecimal.ZERO);
+        stats.put("monthlyIncome", (monthlyIncome != null) ? monthlyIncome : BigDecimal.ZERO);
+
+        return stats;
     }
 }

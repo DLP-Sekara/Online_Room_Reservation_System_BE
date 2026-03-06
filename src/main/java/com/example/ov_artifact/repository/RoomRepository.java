@@ -15,15 +15,14 @@ public interface RoomRepository extends JpaRepository<Room, String> {
     boolean existsByRoomNumber(String roomNumber);
 
     @Query("SELECT r FROM Room r WHERE r.roomType.typeId = :typeId AND " +
-           "r.status = 'AVAILABLE' AND " +
-           "r.roomId NOT IN (" +
-           "  SELECT res.room.roomId FROM Reservation res " +
-           "  WHERE (res.checkIn < :checkOut AND res.checkOut > :checkIn) " +
-           "  AND res.status != 'CANCELLED'" +
-           ")")
+            "r.status != 'MAINTENANCE' AND " +
+            "r.roomId NOT IN (" +
+            "  SELECT res.room.roomId FROM Reservation res " +
+            "  WHERE (res.checkIn < :checkOut AND res.checkOut > :checkIn) " +
+            "  AND (res.status = 'PENDING' OR res.status = 'CONFIRMED')" +
+            ")")
     List<Room> findAvailableRooms(
-        @Param("typeId") String typeId, 
-        @Param("checkIn") LocalDate checkIn, 
-        @Param("checkOut") LocalDate checkOut
-    );
+            @Param("typeId") String typeId,
+            @Param("checkIn") LocalDate checkIn,
+            @Param("checkOut") LocalDate checkOut);
 }

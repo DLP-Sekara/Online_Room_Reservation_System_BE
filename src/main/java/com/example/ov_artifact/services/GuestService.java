@@ -23,13 +23,14 @@ public class GuestService {
     @Autowired
     private ModelMapper modelMapper;
 
-    public void addGuest(GuestDTO guestDTO) {
+    public GuestDTO addGuest(GuestDTO guestDTO) {
         if (guestRepository.existsByNic(guestDTO.getNic())) {
             throw new IllegalArgumentException("Room number '" + guestDTO.getName() + "' already exists!");
         }
 
         Guest guest = modelMapper.map(guestDTO, Guest.class);
-        guestRepository.save(guest);
+        Guest savedGuest =guestRepository.save(guest);
+        return modelMapper.map(savedGuest, GuestDTO.class);
     }
 
     public void updateGuest(GuestDTO guestDTO) {

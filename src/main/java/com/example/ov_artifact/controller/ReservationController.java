@@ -10,8 +10,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @CrossOrigin
@@ -71,6 +73,18 @@ public class ReservationController {
         reservationService.checkOutGuest(resId);
         return new ResponseEntity<>(
                 new StandardResponse(true, 200, "Guest Checked Out Successfully. Room moved to Maintenance.", null),
+                HttpStatus.OK);
+    }
+
+    @GetMapping("/income-stats")
+    public ResponseEntity<StandardResponse> getIncomeStats(
+            @RequestParam int year,
+            @RequestParam int month) {
+
+        Map<String, BigDecimal> stats = reservationService.getIncomeStats(year, month);
+
+        return new ResponseEntity<>(
+                new StandardResponse(true, 200, "Income Stats Fetched", stats),
                 HttpStatus.OK);
     }
 }
