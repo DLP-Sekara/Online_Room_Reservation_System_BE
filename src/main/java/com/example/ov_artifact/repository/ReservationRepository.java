@@ -1,6 +1,10 @@
 package com.example.ov_artifact.repository;
 
 import com.example.ov_artifact.entity.Reservation;
+import com.example.ov_artifact.util.ReservationStatus;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +16,8 @@ import java.util.List;
 
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, String> {
+
+       boolean existsByGuest_GuestId(String guestId);
 
        @Query("SELECT r FROM Reservation r WHERE r.room.roomId = :roomId AND " +
                      "(r.checkIn < :checkOut AND r.checkOut > :checkIn) AND " +
@@ -40,4 +46,18 @@ public interface ReservationRepository extends JpaRepository<Reservation, String
                      "AND YEAR(r.checkOut) = :year " +
                      "AND MONTH(r.checkOut) = :month")
        BigDecimal calculateMonthlyIncome(@Param("year") int year, @Param("month") int month);
+
+       // Filtering logic with Pagination
+       @Query("SELECT r FROM Reservation r JOIN r.guest g WHERE " +
+                     "(:status IS NULL OR r.status = :status) AND " +
+                     "(:guestName IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', :guestName, '%'))) AND " +
+                     "(:startDate IS NULL OR r.checkIn >= :startDate) AND " +
+                     "(:endDate IS NULL OR r.checkOut <= :endDate)")
+       Page<Reservation> findAllWithFilters(
+                     @Param("status") ReservationStatus status,
+                     @Param("guestName") String guestName,
+                     @Param("startDate") LocalDate startDate,
+                     @Param("endDate") LocalDate endDate,
+                     Pageable pageable);
+
 }

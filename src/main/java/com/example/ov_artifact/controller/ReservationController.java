@@ -3,8 +3,10 @@ package com.example.ov_artifact.controller;
 import com.example.ov_artifact.dto.ReservationDTO;
 import com.example.ov_artifact.dto.RoomDTO;
 import com.example.ov_artifact.services.ReservationService;
+import com.example.ov_artifact.util.ReservationStatus;
 import com.example.ov_artifact.util.StandardResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,10 +47,19 @@ public class ReservationController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<StandardResponse> getAllReservations() {
-        List<ReservationDTO> reservations = reservationService.getAllReservations();
+    public ResponseEntity<StandardResponse> getAllReservations(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) ReservationStatus status,
+            @RequestParam(required = false) String guestName,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        Page<ReservationDTO> reservations = reservationService.getAllReservations(
+                page, size, status, guestName, startDate, endDate);
+
         return new ResponseEntity<>(
-                new StandardResponse(true, 200, "Reservations Fetched Successfully", reservations),
+                new StandardResponse(true, 200, "Fetched Successfully", reservations),
                 HttpStatus.OK);
     }
 

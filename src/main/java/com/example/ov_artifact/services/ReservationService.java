@@ -13,6 +13,10 @@ import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -21,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import java.math.BigDecimal; 
+import java.math.BigDecimal;
 
 @Service
 @Transactional
@@ -191,10 +195,16 @@ public class ReservationService {
         return roomCharge.add(mealCharge).add(foodTotal);
     }
 
-    public List<ReservationDTO> getAllReservations() {
-        List<Reservation> reservations = reservationRepository.findAll();
-        return modelMapper.map(reservations, new TypeToken<List<ReservationDTO>>() {
-        }.getType());
+    public Page<ReservationDTO> getAllReservations(int page, int size, ReservationStatus status, String guestName,
+            LocalDate start, LocalDate end) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("checkIn").descending());
+
+        String searchName = (guestName != null && !guestName.isEmpty()) ? guestName : null;
+
+        Page<Reservation> resultPage = reservationRepository.findAllWithFilters(status, searchName, start, end,
+                pageable);
+
+        return resultPage.map(res -> modelMapper.map(res, ReservationDTO.class));
     }
 
     public ReservationDTO getReservationById(String id) {

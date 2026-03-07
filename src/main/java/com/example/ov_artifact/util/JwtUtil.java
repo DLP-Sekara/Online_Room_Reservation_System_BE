@@ -14,12 +14,12 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-     @Value("${jwt.secret}")
+    @Value("${jwt.secret}")
     private String secretString;
 
     private Key key;
 
-     @PostConstruct
+    @PostConstruct
     public void init() {
         this.key = Keys.hmacShaKeyFor(secretString.getBytes());
     }
@@ -28,7 +28,7 @@ public class JwtUtil {
         return Jwts.builder()
                 .setSubject(email)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // පැය 10ක්
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }

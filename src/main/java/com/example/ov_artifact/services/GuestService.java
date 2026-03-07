@@ -3,6 +3,7 @@ package com.example.ov_artifact.services;
 import com.example.ov_artifact.dto.GuestDTO;
 import com.example.ov_artifact.entity.Guest;
 import com.example.ov_artifact.repository.GuestRepository;
+import com.example.ov_artifact.repository.ReservationRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -22,6 +23,9 @@ public class GuestService {
 
     @Autowired
     private ModelMapper modelMapper;
+
+    @Autowired
+    private ReservationRepository reservationRepository;
 
     public GuestDTO addGuest(GuestDTO guestDTO) {
         if (guestRepository.existsByNic(guestDTO.getNic())) {
@@ -43,11 +47,15 @@ public class GuestService {
     }
 
     public void deleteGuest(String id) {
-        if (guestRepository.existsById(id)) {
-            guestRepository.deleteById(id);
-        } else {
+        if (!guestRepository.existsById(id)) {
             throw new RuntimeException("Guest not found for ID: " + id);
         }
+ 
+        if (reservationRepository.existsByGuest_GuestId(id)) {
+            throw new RuntimeException("Cannot delete Guest: This guest has active or past reservations.");
+        }
+
+        guestRepository.deleteById(id);
     }
 
     public List<GuestDTO> getAllGuests() {
