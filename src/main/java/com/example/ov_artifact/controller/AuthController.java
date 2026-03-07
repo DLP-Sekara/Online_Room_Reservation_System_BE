@@ -1,5 +1,7 @@
 package com.example.ov_artifact.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -76,4 +78,15 @@ public class AuthController {
                 new StandardResponse(true, 200, "Session is valid", userDetails),
                 HttpStatus.OK);
     }
+
+    @GetMapping("/all-users")
+    public ResponseEntity<StandardResponse> getAllSystemUsers() {
+
+        List<AuthDTO> allUsers = authService.getAllSystemUsers();
+
+        return new ResponseEntity<>(
+                new StandardResponse(true, 200, "All System Users Fetched Successfully", allUsers),
+                HttpStatus.OK);
+    }
+
 }

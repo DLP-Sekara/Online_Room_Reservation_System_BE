@@ -1,5 +1,8 @@
 package com.example.ov_artifact.services;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -59,4 +62,20 @@ public class AuthService {
         authDTO.setPassword(null);
         return authDTO;
     }
+
+    public List<AuthDTO> getAllSystemUsers() {
+        List<SystemUsers> users = authRepo.findAll();
+        return users.stream().map(user -> {
+            AuthDTO dto = new AuthDTO();
+
+            dto.setName(user.getName());
+            dto.setEmail(user.getEmail());
+            dto.setRole(user.getRole());
+
+            // Password එක null කරන්න (Security purposes)
+            dto.setPassword(null);
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
 }
